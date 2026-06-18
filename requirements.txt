@@ -1,0 +1,40 @@
+# Core Framework
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+python-dotenv==1.0.1
+pydantic==2.6.1
+pydantic-settings==2.1.0
+
+# LLM & AI
+langchain==0.1.9
+langgraph==0.0.26
+langchain-google-genai==0.0.11
+google-generativeai==0.4.0
+transformers==4.38.1
+torch==2.2.0
+accelerate==0.27.2
+
+# Databases
+neo4j==5.17.0
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+
+# Vector Search (optional, for hybrid search)
+faiss-cpu==1.7.4
+
+# Outreach
+twilio==8.13.0
+sendgrid==6.11.0
+
+# Frontend
+streamlit==1.31.1
+
+# Utilities
+httpx==0.26.0
+tenacity==8.2.3
+python-multipart==0.0.9
+
+# Testing
+pytest==8.0.0
+pytest-asyncio==0.23.4

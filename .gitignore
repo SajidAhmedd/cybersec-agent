@@ -1,0 +1,60 @@
+# Environment variables (CONTAINS SECRETS)
+.env
+.env.local
+.env.*.local
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE and tools
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Logs
+logs/
+*.log
+
+# Node.js (frontend-next)
+node_modules/
+.next/
+out/
+
+# Streamlit
+.streamlit/
+
+# ML Models (large files)
+*.bin
+*.pt
+*.pth
+*.safetensors
+
+# Database files
+*.sqlite3
+*.db
