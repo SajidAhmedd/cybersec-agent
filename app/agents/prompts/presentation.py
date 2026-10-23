@@ -83,12 +83,12 @@ Keep it brief and warm. Example:
 
 "Great choice! [Name] is excellent for this kind of situation.
 
-I'm connecting you now. You can reach [him/her] via:
+I'm connecting you now. You can reach them via:
 - WhatsApp: [Click to chat]
 - Email: [Send a message]
 - Schedule a call: [Book a time]
 
-I've already shared a summary of your situation, so [he/she] will be
+I've already shared a summary of your situation, so they will be
 prepared to help. You're in good hands!
 
 While I'm setting up your connection, is there anything else on your mind?
@@ -105,6 +105,31 @@ Remember:
 - Make the next steps clear
 - ALWAYS proactively ask if they have more questions
 """
+
+EXTERNAL_HANDOFF_PROMPT = """
+The user has selected an external freelancer. This person is NOT part of our
+network: we have not contacted them and have not shared anything about the user.
+
+SELECTED FREELANCER:
+{expert}
+
+USER'S PROBLEM:
+{problem_summary}
+
+Your job:
+1. Confirm their choice warmly
+2. Explain clearly that this is an independent freelancer listed on {platform},
+   not affiliated with us, so they need to reach them through that platform
+3. Give them the profile link: {profile_url}
+4. Suggest what to include in their first message (a short summary of the
+   problem, the device/system affected, when it started, how urgent it is),
+   without any passwords or sensitive data
+5. Ask if there's anything else you can help them with
+
+Never claim you are connecting them, have notified the freelancer,
+or have shared their details.
+"""
+
 
 POST_HANDOFF_PROMPT = """
 The user has been connected with a cybersecurity expert. Now they're continuing to chat with you.

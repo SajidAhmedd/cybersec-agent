@@ -5,7 +5,7 @@ First interaction - welcome user and establish rapport
 
 from app.agents.states import AgentState
 from app.agents.prompts.system import SYSTEM_PROMPT, GREETING_PROMPT
-from app.llm import get_gemini
+from app.llm import get_llm
 
 
 def greeting_node(state: AgentState) -> AgentState:
@@ -15,12 +15,11 @@ def greeting_node(state: AgentState) -> AgentState:
     """
     print("[GREETING NODE] Starting greeting_node")
 
-    gemini = get_gemini()
-    print(f"[GREETING NODE] Got gemini client - mock_mode: {gemini.mock_mode}")
+    llm = get_llm()
+    print(f"[GREETING NODE] Got LLM client - mock_mode: {llm.mock_mode}")
 
     # Get user's initial message
     user_message = state.get("user_message", "")
-    print(f"[GREETING NODE] User message: {user_message}")
 
     # Build context for greeting
     full_prompt = f"""
@@ -34,17 +33,15 @@ Generate a warm, brief response that:
 3. Asks an open question to understand more
 """
 
-    print("[GREETING NODE] Calling gemini.generate()...")
-    response = gemini.generate(
+    print("[GREETING NODE] Calling llm.generate()...")
+    response = llm.generate(
         prompt=full_prompt,
         system_prompt=SYSTEM_PROMPT
     )
-    print(f"[GREETING NODE] Got response: {response[:100]}...")
 
-    # Append to existing messages (for consistency, even if typically first)
+    # Append the reply (the workflow already added the user's message)
     existing_messages = state.get("messages", [])
     new_messages = existing_messages + [
-        {"role": "user", "content": user_message},
         {"role": "assistant", "content": response}
     ]
 

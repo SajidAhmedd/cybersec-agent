@@ -6,7 +6,7 @@ Present matched experts to the user with explanations
 from app.agents.states import AgentState
 from app.agents.prompts.system import SYSTEM_PROMPT
 from app.agents.prompts.presentation import PRESENTATION_PROMPT
-from app.llm import get_gemini
+from app.llm import get_llm
 
 
 def presentation_node(state: AgentState) -> AgentState:
@@ -15,7 +15,7 @@ def presentation_node(state: AgentState) -> AgentState:
     Generates personalized explanations for why each expert matches.
     """
 
-    gemini = get_gemini()
+    llm = get_llm()
 
     # Get problem context for personalization
     problem_context = state.get("problem_context", {})
@@ -45,7 +45,7 @@ Let me know how you'd like to proceed."""
 
         # Generate presentation with conversation history
         messages = state.get("messages", [])
-        response = gemini.chat(
+        response = llm.chat(
             message="Present these experts to the user based on our conversation.",
             system_prompt=SYSTEM_PROMPT + "\n\n" + prompt,
             history=messages
@@ -97,6 +97,18 @@ def _format_experts(matched_experts: list[dict]) -> str:
     for i, expert_data in enumerate(matched_experts, 1):
         expert = expert_data.get("expert", {})
         match = expert_data.get("match", {})
+
+        if expert.get("is_external"):
+            # Only list what we actually know; never invent ratings or rates
+            lines.append(f"""
+Expert {i} (EXTERNAL - independent freelancer on {expert.get('profile_platform') or 'a freelance platform'}, not affiliated with us; the user reaches them through that platform):
+- Name: {expert.get('name', 'Unknown')}
+- Title: {expert.get('title', 'Security Freelancer')}
+- Skills: {', '.join(expert.get('skills', [])[:5])}
+- Match score: {match.get('match_score', 0):.0%}
+- Why they match: {', '.join(match.get('match_reasons', []))}
+""")
+            continue
 
         lines.append(f"""
 Expert {i}:

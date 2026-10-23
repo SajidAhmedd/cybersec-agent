@@ -1,0 +1,6 @@
+# Optional: run the Foundation-Sec-8B security model locally
+# (set USE_LOCAL_SECURITY_MODEL=true and HUGGINGFACE_TOKEN; needs a GPU with ~16 GB VRAM)
+-r requirements.txt
+transformers==4.38.1
+torch==2.2.0
+accelerate==0.27.2

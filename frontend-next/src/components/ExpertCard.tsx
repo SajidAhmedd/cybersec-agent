@@ -1,7 +1,7 @@
 'use client';
 
 import { ExpertRecommendation } from '@/types';
-import { Star, Clock, DollarSign, MapPin, CheckCircle2 } from 'lucide-react';
+import { Star, Clock, DollarSign, MapPin, CheckCircle2, ExternalLink } from 'lucide-react';
 
 interface ExpertCardProps {
   recommendation: ExpertRecommendation;
@@ -40,17 +40,38 @@ export function ExpertCard({
             <p className="text-sm text-gray-600">{expert.title}</p>
           </div>
 
-          {/* Rating */}
-          <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
-            <Star size={16} className="text-yellow-500 fill-yellow-500" />
-            <span className="text-sm font-medium text-yellow-700">
-              {expert.rating.toFixed(1)}
-            </span>
-            <span className="text-xs text-yellow-600">
-              ({expert.total_reviews})
-            </span>
-          </div>
+          {/* Rating (network experts only - external profiles have no rating here) */}
+          {!expert.is_external && (
+            <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
+              <Star size={16} className="text-yellow-500 fill-yellow-500" />
+              <span className="text-sm font-medium text-yellow-700">
+                {expert.rating.toFixed(1)}
+              </span>
+              <span className="text-xs text-yellow-600">
+                ({expert.total_reviews})
+              </span>
+            </div>
+          )}
         </div>
+
+        {/* External freelancer notice and profile link */}
+        {expert.is_external && expert.profile_url && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-xs text-amber-800 mb-2">
+              External freelancer profile on {expert.profile_platform || 'a freelance platform'}.
+              Not affiliated with this project - reach them through their profile.
+            </p>
+            <a
+              href={expert.profile_url}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="inline-flex items-center gap-1 text-sm font-medium text-amber-900 underline hover:text-amber-700"
+            >
+              View profile on {expert.profile_platform || 'their platform'}
+              <ExternalLink size={14} />
+            </a>
+          </div>
+        )}
 
         {/* Bio */}
         {expert.bio && (
@@ -122,7 +143,11 @@ export function ExpertCard({
                      disabled:bg-gray-300 disabled:cursor-not-allowed
                      focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
         >
-          {isLoading ? 'Connecting...' : `Connect with ${expert.name.split(' ')[0]}`}
+          {isLoading
+            ? 'Connecting...'
+            : expert.is_external
+              ? `Choose ${expert.name.split(' ')[0]}`
+              : `Connect with ${expert.name.split(' ')[0]}`}
         </button>
       </div>
     </div>

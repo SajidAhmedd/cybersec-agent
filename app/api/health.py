@@ -4,11 +4,13 @@ For monitoring and container orchestration
 """
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.postgres import get_db
 from app.graph.connection import get_neo4j
 from app.config import settings
+from app.llm.provider import llm_key_configured
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
@@ -33,12 +35,12 @@ async def readiness_check(db: Session = Depends(get_db)):
     checks = {
         "postgres": False,
         "neo4j": False,
-        "gemini": False
+        "llm": False
     }
 
     # Check PostgreSQL
     try:
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         checks["postgres"] = True
     except Exception as e:
         checks["postgres_error"] = str(e)
@@ -50,14 +52,14 @@ async def readiness_check(db: Session = Depends(get_db)):
     except Exception as e:
         checks["neo4j_error"] = str(e)
 
-    # Check Gemini API key is configured
-    checks["gemini"] = bool(settings.google_api_key)
+    # Check the selected LLM provider has an API key configured
+    checks["llm"] = llm_key_configured()
 
     # Overall status
     all_healthy = all([
         checks["postgres"],
         checks["neo4j"],
-        checks["gemini"]
+        checks["llm"]
     ])
 
     return {

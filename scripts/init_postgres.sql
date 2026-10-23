@@ -55,6 +55,12 @@ CREATE TABLE IF NOT EXISTS experts (
     updated_at TIMESTAMP WITH TIME ZONE
 );
 
+-- External freelancer profiles (listed with a link only; no email/phone stored)
+ALTER TABLE experts ALTER COLUMN email DROP NOT NULL;
+ALTER TABLE experts ADD COLUMN IF NOT EXISTS is_external BOOLEAN DEFAULT FALSE;
+ALTER TABLE experts ADD COLUMN IF NOT EXISTS profile_platform VARCHAR(50);
+ALTER TABLE experts ADD COLUMN IF NOT EXISTS profile_url VARCHAR(500);
+
 -- Expert-Skills junction table
 CREATE TABLE IF NOT EXISTS expert_skills (
     expert_id INTEGER REFERENCES experts(id) ON DELETE CASCADE,
