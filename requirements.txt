@@ -17,6 +17,7 @@ groq>=1.7,<2
 
 # Databases
 neo4j==5.17.0
+certifi
 psycopg2-binary==2.9.9
 sqlalchemy==2.0.25
 asyncpg==0.29.0
