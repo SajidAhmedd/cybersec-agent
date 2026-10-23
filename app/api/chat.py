@@ -4,11 +4,12 @@ Main conversation endpoints for the cybersecurity agent
 """
 
 import uuid
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 
 from app.agents.workflow import get_chat_workflow
+from app.api.rate_limit import chat_rate_limit
 from app.schemas.conversation import ChatRequest, ChatResponse
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -40,7 +41,7 @@ class ContinueChatResponse(BaseModel):
     experts: Optional[list] = None
 
 
-@router.post("/start", response_model=StartChatResponse)
+@router.post("/start", response_model=StartChatResponse, dependencies=[Depends(chat_rate_limit)])
 async def start_chat(request: StartChatRequest):
     """
     Start a new chat session.
@@ -72,7 +73,7 @@ async def start_chat(request: StartChatRequest):
         )
 
 
-@router.post("/{session_id}", response_model=ContinueChatResponse)
+@router.post("/{session_id}", response_model=ContinueChatResponse, dependencies=[Depends(chat_rate_limit)])
 async def continue_chat(session_id: str, request: ContinueChatRequest):
     """
     Continue an existing chat session.
@@ -157,7 +158,7 @@ async def end_session(session_id: str):
     return {"message": "Session ended", "session_id": session_id}
 
 
-@router.post("/{session_id}/select-expert")
+@router.post("/{session_id}/select-expert", dependencies=[Depends(chat_rate_limit)])
 async def select_expert(session_id: str, expert_id: int):
     """
     Select an expert from the matched results.

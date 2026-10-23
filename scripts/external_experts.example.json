@@ -1,0 +1,13 @@
+[
+  {
+    "name": "Full name as shown on their profile",
+    "title": "Their headline, e.g. Incident Response & Malware Analyst",
+    "profile_platform": "Upwork",
+    "profile_url": "https://www.upwork.com/freelancers/~REPLACE_ME",
+    "skills": ["incident_response", "malware_analysis", "ransomware_response"],
+    "platforms": ["windows", "linux"],
+    "services": ["incident_response", "forensic_investigation"],
+    "location": "Country (optional)",
+    "years_experience": 5
+  }
+]

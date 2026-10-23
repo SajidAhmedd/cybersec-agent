@@ -50,38 +50,41 @@ export function useChat() {
       addMessage('user', content);
 
       try {
-        let response;
+        let reply: string;
 
         if (!session.sessionId) {
           // Start new session
-          response = await chatApi.startChat(content);
+          const started = await chatApi.startChat(content);
           setSession((prev) => ({
             ...prev,
-            sessionId: response.session_id,
-            phase: response.phase,
+            sessionId: started.session_id,
+            phase: started.phase,
           }));
+          reply = started.response;
         } else {
           try {
             // Continue existing session
-            response = await chatApi.continueChat(session.sessionId, content);
+            const continued = await chatApi.continueChat(session.sessionId, content);
             setSession((prev) => ({
               ...prev,
-              phase: response.phase,
-              isComplete: response.is_complete,
+              phase: continued.phase,
+              isComplete: continued.is_complete,
               // Only keep experts if we're still in presenting phase
               // Clear them after handoff/completion to avoid showing again
-              experts: response.is_complete ? null : (response.experts || prev.experts),
+              experts: continued.is_complete ? null : (continued.experts || prev.experts),
             }));
+            reply = continued.response;
           } catch (continueErr) {
             // If session not found, start a new one
             if (continueErr instanceof ApiError && continueErr.message.includes('Session not found')) {
               console.log('Session expired, starting new session...');
-              response = await chatApi.startChat(content);
+              const restarted = await chatApi.startChat(content);
               setSession((prev) => ({
                 ...prev,
-                sessionId: response.session_id,
-                phase: response.phase,
+                sessionId: restarted.session_id,
+                phase: restarted.phase,
               }));
+              reply = restarted.response;
             } else {
               throw continueErr;
             }
@@ -89,7 +92,7 @@ export function useChat() {
         }
 
         // Add assistant response
-        addMessage('assistant', response.response);
+        addMessage('assistant', reply);
       } catch (err) {
         const errorMessage =
           err instanceof ApiError

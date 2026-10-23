@@ -51,6 +51,10 @@ export interface Expert {
   whatsapp?: string;
   linkedin?: string;
   website?: string;
+  // External freelancer profiles (listed with a link, not affiliated)
+  is_external?: boolean;
+  profile_platform?: string;
+  profile_url?: string;
 }
 
 export interface ExpertMatch {

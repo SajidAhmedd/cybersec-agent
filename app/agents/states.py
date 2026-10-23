@@ -3,8 +3,7 @@ Agent State Definition
 The state object that flows through the LangGraph workflow
 """
 
-from typing import TypedDict, Optional, Annotated
-from operator import add
+from typing import TypedDict, Optional
 
 
 class AgentState(TypedDict):
@@ -17,13 +16,13 @@ class AgentState(TypedDict):
     session_id: str
 
     # Conversation
-    messages: Annotated[list[dict], add]  # Accumulates messages
+    messages: list[dict]  # Full conversation history (nodes return the updated list)
     current_phase: str
 
     # User's last message
     user_message: str
 
-    # Extracted problem context (from Gemini)
+    # Extracted problem context (from Claude)
     problem_context: Optional[dict]
 
     # Security analysis (from Foundation-Sec)

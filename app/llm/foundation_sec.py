@@ -12,6 +12,36 @@ from app.config import settings
 
 T = TypeVar('T', bound=BaseModel)
 
+SECURITY_SYSTEM_PROMPT = """You are a cybersecurity expert with deep knowledge of:
+- MITRE ATT&CK framework
+- Common attack patterns and TTPs
+- Incident response procedures
+- Digital forensics
+- Various threat types (malware, phishing, ransomware, etc.)
+
+Analyze security incidents and provide structured threat assessments."""
+
+
+def _normalize_name(name: str) -> str:
+    """Normalize a skill/platform/service name to the graph's snake_case form"""
+    return re.sub(r"[\s\-/]+", "_", name.strip().lower())
+
+
+def _graph_vocabulary() -> dict[str, list[str]]:
+    """Skill, platform and service names that exist in the Neo4j expert graph"""
+    try:
+        from app.graph.connection import get_neo4j
+        rows = get_neo4j().run_query(
+            "CALL { MATCH (s:Skill) RETURN collect(s.name) AS skills } "
+            "CALL { MATCH (p:Platform) RETURN collect(p.name) AS platforms } "
+            "CALL { MATCH (v:Service) RETURN collect(v.name) AS services } "
+            "RETURN skills, platforms, services"
+        )
+        return dict(rows[0]) if rows else {}
+    except Exception as e:
+        print(f"Could not load graph vocabulary: {e}")
+        return {}
+
 
 class FoundationSecClient:
     """
@@ -66,7 +96,7 @@ class FoundationSecClient:
             print("Model loaded successfully")
 
         except ImportError:
-            print("transformers not installed, falling back to Gemini-based security analysis")
+            print("transformers not installed, falling back to LLM-based security analysis")
             self.use_local = False
         except Exception as e:
             print(f"Failed to load local model: {e}")
@@ -88,21 +118,48 @@ class FoundationSecClient:
             SecurityAnalysis object or dict
         """
 
-        prompt = self._build_analysis_prompt(problem_context)
+        vocabulary = _graph_vocabulary()
+        prompt = self._build_analysis_prompt(problem_context, vocabulary)
 
         if self.use_local and self._model is not None:
             response = self._generate_local(prompt)
+            if not response_model:
+                return response
+            analysis = self._parse_structured(response, response_model)
+        elif response_model:
+            # Use the conversational LLM's structured output mode
+            from .provider import get_llm
+            analysis = get_llm().generate_structured(
+                prompt=prompt,
+                response_model=response_model,
+                system_prompt=SECURITY_SYSTEM_PROMPT
+            )
         else:
-            # Fallback to Gemini with security-focused prompt
-            response = self._generate_with_gemini(prompt)
+            return self._generate_with_llm(prompt)
 
-        # Parse response
-        if response_model:
-            return self._parse_structured(response, response_model)
-        return response
+        return self._normalize_names(analysis)
 
-    def _build_analysis_prompt(self, problem_context: dict) -> str:
+    @staticmethod
+    def _normalize_names(analysis: T) -> T:
+        """Map skill/platform/service names onto the graph's snake_case names"""
+        for field in ("required_skills", "platforms", "recommended_services"):
+            values = getattr(analysis, field, None)
+            if values:
+                setattr(analysis, field, list(dict.fromkeys(_normalize_name(v) for v in values)))
+        return analysis
+
+    def _build_analysis_prompt(self, problem_context: dict, vocabulary: dict = None) -> str:
         """Build the analysis prompt for the security model"""
+
+        vocabulary = vocabulary or {}
+        allowed = ""
+        if vocabulary:
+            allowed = f"""
+ALLOWED VALUES (expert matching only works with these exact names):
+- required_skills (choose at least two): {', '.join(vocabulary.get('skills', []))}
+- platforms: {', '.join(vocabulary.get('platforms', []))}
+- recommended_services: {', '.join(vocabulary.get('services', []))}
+"""
 
         return f"""You are a cybersecurity expert analyzing a security incident.
 
@@ -116,7 +173,7 @@ INCIDENT DETAILS:
 
 ANALYSIS REQUIRED:
 Based on these details, provide a structured security analysis.
-
+{allowed}
 Output the following as valid JSON:
 {{
     "threat_type": "primary threat category (e.g., mobile_compromise, ransomware, phishing, data_breach)",
@@ -157,24 +214,15 @@ Respond ONLY with the JSON object."""
 
         return response
 
-    def _generate_with_gemini(self, prompt: str) -> str:
-        """Fallback: Use Gemini with security-focused prompting"""
-        from .gemini import get_gemini
+    def _generate_with_llm(self, prompt: str) -> str:
+        """Fallback: Use the conversational LLM with security-focused prompting"""
+        from .provider import get_llm
 
-        gemini = get_gemini()
+        llm = get_llm()
 
-        system_prompt = """You are a cybersecurity expert with deep knowledge of:
-- MITRE ATT&CK framework
-- Common attack patterns and TTPs
-- Incident response procedures
-- Digital forensics
-- Various threat types (malware, phishing, ransomware, etc.)
-
-Analyze security incidents and provide structured threat assessments."""
-
-        return gemini.generate(
+        return llm.generate(
             prompt=prompt,
-            system_prompt=system_prompt
+            system_prompt=SECURITY_SYSTEM_PROMPT
         )
 
     def _parse_structured(self, response: str, response_model: Type[T]) -> T:

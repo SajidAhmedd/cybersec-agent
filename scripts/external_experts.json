@@ -1,0 +1,134 @@
+[
+  {
+    "name": "Brian Stanek",
+    "title": "Security Engineer and Developer",
+    "profile_platform": "Toptal",
+    "profile_url": "https://www.toptal.com/developers/resume/brian-stanek",
+    "skills": [
+      "incident_response",
+      "penetration_testing",
+      "cloud_security",
+      "security_consulting"
+    ],
+    "platforms": [
+      "windows",
+      "linux",
+      "aws",
+      "azure"
+    ],
+    "services": [
+      "incident_response",
+      "security_assessment",
+      "consultation"
+    ],
+    "location": "Indianapolis, IN, United States",
+    "years_experience": 25
+  },
+  {
+    "name": "Mohamed Badawi",
+    "title": "Security Architect and Developer",
+    "profile_platform": "Toptal",
+    "profile_url": "https://www.toptal.com/developers/resume/mohamed-badawi",
+    "skills": [
+      "incident_response",
+      "digital_forensics",
+      "cloud_security",
+      "security_consulting"
+    ],
+    "platforms": [
+      "windows"
+    ],
+    "services": [
+      "incident_response",
+      "forensic_investigation",
+      "consultation"
+    ],
+    "location": "Dubai, United Arab Emirates",
+    "years_experience": 20
+  },
+  {
+    "name": "Ilia Tivin",
+    "title": "Cybersecurity Expert and Developer",
+    "profile_platform": "Toptal",
+    "profile_url": "https://www.toptal.com/developers/resume/ilia-tivin",
+    "skills": [
+      "incident_response",
+      "cloud_security",
+      "security_consulting"
+    ],
+    "platforms": [
+      "windows",
+      "macos",
+      "linux",
+      "aws",
+      "azure"
+    ],
+    "services": [
+      "incident_response",
+      "security_assessment",
+      "consultation"
+    ],
+    "location": "Singapore",
+    "years_experience": 20
+  },
+  {
+    "name": "Onkar Jog",
+    "title": "Security Engineer and Developer",
+    "profile_platform": "Toptal",
+    "profile_url": "https://www.toptal.com/developers/resume/onkar-jog",
+    "skills": [
+      "incident_response",
+      "cloud_security",
+      "security_consulting"
+    ],
+    "platforms": [
+      "azure"
+    ],
+    "services": [
+      "incident_response",
+      "consultation"
+    ],
+    "location": "Oshawa, ON, Canada",
+    "years_experience": 18
+  },
+  {
+    "name": "Greg Bassett",
+    "title": "Cybersecurity Executive and Compliance Program Developer",
+    "profile_platform": "Toptal",
+    "profile_url": "https://www.toptal.com/developers/resume/greg-bassett",
+    "skills": [
+      "incident_response",
+      "cloud_security",
+      "security_consulting"
+    ],
+    "platforms": [
+      "aws"
+    ],
+    "services": [
+      "security_assessment",
+      "consultation"
+    ],
+    "location": "Basking Ridge, NJ, United States",
+    "years_experience": 15
+  },
+  {
+    "name": "Heeraj Nair",
+    "title": "IT Security Developer",
+    "profile_platform": "Toptal",
+    "profile_url": "https://www.toptal.com/developers/resume/heeraj-nair",
+    "skills": [
+      "penetration_testing",
+      "cloud_security"
+    ],
+    "platforms": [
+      "linux",
+      "aws",
+      "azure"
+    ],
+    "services": [
+      "security_assessment"
+    ],
+    "location": "Kuala Lumpur, Malaysia",
+    "years_experience": 5
+  }
+]

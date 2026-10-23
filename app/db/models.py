@@ -39,7 +39,7 @@ class Expert(Base):
 
     # Basic info
     name = Column(String(255), nullable=False)
-    email = Column(String(255), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=True, index=True)  # External profiles have none
     phone = Column(String(50), nullable=True)
     password_hash = Column(String(255), nullable=True)  # If they can login
 
@@ -69,6 +69,12 @@ class Expert(Base):
     whatsapp = Column(String(50), nullable=True)
     linkedin = Column(String(255), nullable=True)
     website = Column(String(255), nullable=True)
+
+    # External freelancer profiles (e.g. Upwork) - listed with a link only,
+    # not part of the network and never contacted by the platform
+    is_external = Column(Boolean, default=False)
+    profile_platform = Column(String(50), nullable=True)
+    profile_url = Column(String(500), nullable=True)
 
     # Profile
     profile_image = Column(String(500), nullable=True)
@@ -110,6 +116,9 @@ class Expert(Base):
             "whatsapp": self.whatsapp,
             "linkedin": self.linkedin,
             "website": self.website,
+            "is_external": bool(self.is_external),
+            "profile_platform": self.profile_platform,
+            "profile_url": self.profile_url,
         }
 
 
@@ -202,6 +211,6 @@ class ConversationMessage(Base):
 
     role = Column(String(20), nullable=False)  # 'user', 'assistant', 'system'
     content = Column(Text, nullable=False)
-    agent = Column(String(50), nullable=True)  # 'gemini', 'foundation_sec'
+    agent = Column(String(50), nullable=True)  # 'claude', 'foundation_sec'
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

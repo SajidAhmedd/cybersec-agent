@@ -1,0 +1,3 @@
+# Optional: the legacy Streamlit frontend (frontend/streamlit_app.py)
+streamlit==1.31.1
+requests

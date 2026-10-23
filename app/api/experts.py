@@ -7,9 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 
+from app.api.security import require_admin
 from app.db.postgres import get_db
 from app.db.models import Expert, Skill, Certification
-from app.schemas.expert import Expert as ExpertSchema
+from app.schemas.expert import Expert as ExpertSchema, public_expert
 
 router = APIRouter(prefix="/experts", tags=["Experts"])
 
@@ -42,7 +43,7 @@ async def list_experts(
         "total": total,
         "skip": skip,
         "limit": limit,
-        "experts": [e.to_dict() for e in experts]
+        "experts": [public_expert(e.to_dict()) for e in experts]
     }
 
 
@@ -57,10 +58,10 @@ async def get_expert(expert_id: int, db: Session = Depends(get_db)):
     if not expert:
         raise HTTPException(status_code=404, detail="Expert not found")
 
-    return expert.to_dict()
+    return public_expert(expert.to_dict())
 
 
-@router.post("")
+@router.post("", dependencies=[Depends(require_admin)])
 async def create_expert(expert_data: dict, db: Session = Depends(get_db)):
     """
     Create a new expert profile.
@@ -96,7 +97,7 @@ async def create_expert(expert_data: dict, db: Session = Depends(get_db)):
     return expert.to_dict()
 
 
-@router.put("/{expert_id}")
+@router.put("/{expert_id}", dependencies=[Depends(require_admin)])
 async def update_expert(
     expert_id: int,
     expert_data: dict,
@@ -122,7 +123,7 @@ async def update_expert(
     return expert.to_dict()
 
 
-@router.delete("/{expert_id}")
+@router.delete("/{expert_id}", dependencies=[Depends(require_admin)])
 async def delete_expert(expert_id: int, db: Session = Depends(get_db)):
     """
     Soft delete an expert (mark as inactive).
