@@ -5,8 +5,10 @@ Complete the connection between user and expert
 
 from app.agents.states import AgentState
 from app.agents.prompts.system import SYSTEM_PROMPT
-from app.agents.prompts.presentation import HANDOFF_PROMPT
-from app.llm import get_gemini
+from app.agents.prompts.presentation import HANDOFF_PROMPT, EXTERNAL_HANDOFF_PROMPT
+from app.config import settings
+from app.llm import get_llm
+from app.services.handoff import get_handoff_service
 
 
 def handoff_node(state: AgentState) -> AgentState:
@@ -15,7 +17,7 @@ def handoff_node(state: AgentState) -> AgentState:
     Generate confirmation message and trigger notifications.
     """
 
-    gemini = get_gemini()
+    llm = get_llm()
 
     # Get selected expert
     selected_id = state.get("selected_expert_id")
@@ -38,28 +40,35 @@ def handoff_node(state: AgentState) -> AgentState:
     expert = selected_expert.get("expert", {})
     problem_context = state.get("problem_context", {})
 
-    # Build contact options
-    contact_options = _build_contact_options(expert)
-
     # Format problem summary
     problem_summary = _format_problem_summary(problem_context)
 
-    # Generate handoff message with conversation history
-    prompt = HANDOFF_PROMPT.format(
-        expert=_format_expert(expert),
-        problem_summary=problem_summary,
-        contact_options=contact_options
-    )
+    if expert.get("is_external"):
+        # External freelancer: point the user to their public profile; nobody is notified
+        prompt = EXTERNAL_HANDOFF_PROMPT.format(
+            expert=_format_expert(expert),
+            problem_summary=problem_summary,
+            platform=expert.get("profile_platform") or "a freelance platform",
+            profile_url=expert.get("profile_url", "")
+        )
+    else:
+        prompt = HANDOFF_PROMPT.format(
+            expert=_format_expert(expert),
+            problem_summary=problem_summary,
+            contact_options=_build_contact_options(expert)
+        )
 
+    # Generate handoff message with conversation history
     messages = state.get("messages", [])
-    response = gemini.chat(
+    response = llm.chat(
         message=f"The user selected {expert.get('name')}. Complete the handoff.",
         system_prompt=SYSTEM_PROMPT + "\n\n" + prompt,
         history=messages
     )
 
-    # Trigger expert notification (async in production)
-    _notify_expert(expert, problem_context, messages)
+    # Trigger expert notification (network experts only)
+    if not expert.get("is_external"):
+        _notify_expert(expert, problem_context, state.get("security_analysis") or {}, messages)
 
     # Append to existing messages
     new_messages = messages + [
@@ -118,10 +127,10 @@ def _format_problem_summary(context: dict) -> str:
     return " | ".join(parts) if parts else "Security concern"
 
 
-def _notify_expert(expert: dict, problem_context: dict, messages: list[dict]):
+def _notify_expert(expert: dict, problem_context: dict, security_analysis: dict, messages: list[dict]):
     """
-    Notify the expert about the new client.
-    In production, this would send WhatsApp/Email via services.
+    Notify the expert about the new client via WhatsApp and/or Email.
+    Only sends when OUTREACH_ENABLED=true and Twilio/SendGrid are configured.
     """
 
     # Build notification content
@@ -130,6 +139,7 @@ def _notify_expert(expert: dict, problem_context: dict, messages: list[dict]):
         "expert_name": expert.get("name"),
         "expert_contact": expert.get("whatsapp") or expert.get("email"),
         "problem_summary": {
+            "threat_type": security_analysis.get("threat_type"),
             "device": problem_context.get("device"),
             "symptoms": problem_context.get("symptoms", []),
             "urgency": problem_context.get("urgency"),
@@ -138,12 +148,26 @@ def _notify_expert(expert: dict, problem_context: dict, messages: list[dict]):
         "conversation_summary": _summarize_conversation(messages)
     }
 
-    # TODO: In production, call outreach services
-    # from app.services.outreach import notify_expert_whatsapp, notify_expert_email
-    # await notify_expert_whatsapp(notification)
-    # await notify_expert_email(notification)
+    if not settings.outreach_enabled:
+        print(f"[NOTIFICATION] Outreach disabled - would notify expert {notification['expert_name']} (id {notification['expert_id']})")
+        return
 
-    print(f"[NOTIFICATION] Would notify expert: {notification}")
+    try:
+        result = get_handoff_service().notify_expert_only(
+            expert_email=expert.get("email"),
+            expert_phone=expert.get("whatsapp") or expert.get("phone"),
+            expert_name=expert.get("name", "Expert"),
+            problem_summary=notification["problem_summary"],
+            conversation_summary=notification["conversation_summary"]
+        )
+    except Exception as e:
+        print(f"[NOTIFICATION] Failed to notify expert {notification['expert_id']}: {e}")
+        return
+
+    if result["success"]:
+        print(f"[NOTIFICATION] Notified expert {notification['expert_id']} via {', '.join(result['channels_used'])}")
+    else:
+        print(f"[NOTIFICATION] Expert {notification['expert_id']} not notified: {result['errors'] or 'no outreach channel configured'}")
 
 
 def _summarize_conversation(messages: list[dict]) -> str:

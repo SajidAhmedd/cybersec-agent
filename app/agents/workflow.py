@@ -7,6 +7,8 @@ from typing import Literal
 from langgraph.graph import StateGraph, END
 
 from .states import AgentState
+from app.db.conversations import save_conversation
+from app.schemas.expert import public_expert
 from .nodes import (
     greeting_node,
     gathering_node,
@@ -20,73 +22,67 @@ from .nodes import (
 )
 
 
-def should_continue_gathering(state: AgentState) -> Literal["gather_more", "analyze"]:
-    """
-    Decide whether to continue gathering info or proceed to analysis.
-    """
-    has_sufficient = state.get("has_sufficient_context", False)
-    attempts = state.get("extraction_attempts", 0)
-
-    # If we have enough context, proceed
-    if has_sufficient:
-        return "analyze"
-
-    # If we've tried too many times, proceed anyway
-    if attempts >= 5:
-        return "analyze"
-
-    # Otherwise, keep gathering
-    return "gather_more"
-
-
-def should_continue_selecting(state: AgentState) -> Literal["need_selection", "handoff"]:
-    """
-    Check if user has made a valid selection.
-    """
-    selected_id = state.get("selected_expert_id")
-
-    if selected_id is not None:
-        return "handoff"
-
-    return "need_selection"
-
-
 def route_by_phase(state: AgentState) -> str:
     """
-    Route to appropriate node based on current phase.
-    Used for handling incoming messages at different conversation stages.
+    Entry router: pick the node that handles the user's message
+    based on the conversation's current phase.
     """
     phase = state.get("current_phase", "greeting")
 
     routing = {
         "greeting": "greeting",
-        "gathering": "gathering",
-        "extracting": "extraction",
-        "analyzing": "security_analysis",
-        "matching": "matching",
         "presenting": "selection",
         "selecting": "selection",
         "handoff": "handoff",
-        "complete": "end"
+        "complete": "conversation",
+        "conversation": "conversation",
     }
 
-    return routing.get(phase, "greeting")
+    # gathering / extracting / anything else -> extract what the user just told us
+    return routing.get(phase, "extraction")
+
+
+def ready_for_matching(state: AgentState) -> Literal["analyze", "ask_more"]:
+    """
+    Decide whether we know enough to analyze the threat and match experts.
+    Need sufficient context AND at least 2 gathering exchanges,
+    or at least 5 exchanges (fallback to prevent an endless loop).
+    """
+    attempts = state.get("extraction_attempts", 0)
+    has_context = state.get("has_sufficient_context", False)
+
+    if (has_context and attempts >= 2) or attempts >= 5:
+        print(f"[WORKFLOW] Moving to expert matching (attempts: {attempts}, has_context: {has_context})")
+        return "analyze"
+
+    print(f"[WORKFLOW] Continuing gathering (attempts: {attempts}, has_context: {has_context})")
+    return "ask_more"
+
+
+def expert_selected(state: AgentState) -> Literal["handoff", "wait_for_user"]:
+    """Check whether the selection node identified an expert"""
+    if state.get("current_phase") == "handoff" and state.get("selected_expert_id") is not None:
+        return "handoff"
+    return "wait_for_user"
 
 
 def create_chat_workflow() -> StateGraph:
     """
-    Create the main conversation workflow graph.
+    Create the conversation workflow graph.
+
+    The graph runs once per user message: it enters at the node for the
+    current phase and runs until the assistant needs the user's next reply.
 
     Flow:
     1. GREETING → First interaction, welcome user
-    2. GATHERING → Ask questions, understand problem
-    3. EXTRACTION → Convert conversation to structured context
-    4. (Loop back to GATHERING if not enough context)
-    5. SECURITY_ANALYSIS → Analyze threat with Foundation-Sec
-    6. MATCHING → Find experts in Neo4j
-    7. PRESENTATION → Present experts to user
-    8. SELECTION → Handle user's choice
-    9. HANDOFF → Connect user with expert
+    2. EXTRACTION → Convert the conversation so far to structured context
+    3. GATHERING → If context is still missing, ask about it and wait for the answer
+    4. SECURITY_ANALYSIS → Analyze threat with Foundation-Sec
+    5. MATCHING → Find experts in Neo4j
+    6. PRESENTATION → Present experts to user
+    7. SELECTION → Handle user's choice
+    8. HANDOFF → Connect user with expert
+    9. CONVERSATION → Free-form follow-up after the handoff
     """
 
     # Create the graph
@@ -96,54 +92,59 @@ def create_chat_workflow() -> StateGraph:
     workflow.add_node("greeting", greeting_node)
     workflow.add_node("gathering", gathering_node)
     workflow.add_node("extraction", extraction_node)
-    workflow.add_node("security_analysis", security_analysis_node)
+    workflow.add_node("analyze_security", security_analysis_node)
     workflow.add_node("matching", matching_node)
     workflow.add_node("presentation", presentation_node)
     workflow.add_node("selection", selection_node)
     workflow.add_node("handoff", handoff_node)
+    workflow.add_node("conversation", conversation_node)
 
-    # Set entry point
-    workflow.set_entry_point("greeting")
+    # Each user message enters at the node for the current phase
+    workflow.set_conditional_entry_point(
+        route_by_phase,
+        {
+            "greeting": "greeting",
+            "extraction": "extraction",
+            "selection": "selection",
+            "handoff": "handoff",
+            "conversation": "conversation",
+        }
+    )
 
-    # Define edges
+    # Greeting → wait for the user's answer
+    workflow.add_edge("greeting", END)
 
-    # Greeting → Gathering
-    workflow.add_edge("greeting", "gathering")
-
-    # Gathering → Extraction (always extract after gathering)
-    workflow.add_edge("gathering", "extraction")
-
-    # Extraction → Conditional (gather more or analyze)
+    # Extraction → analyze, or ask the user for what is still missing
     workflow.add_conditional_edges(
         "extraction",
-        should_continue_gathering,
+        ready_for_matching,
         {
-            "gather_more": "gathering",
-            "analyze": "security_analysis"
+            "analyze": "analyze_security",
+            "ask_more": "gathering"
         }
     )
 
-    # Security Analysis → Matching
-    workflow.add_edge("security_analysis", "matching")
+    # Gathering → wait for the user's answer
+    workflow.add_edge("gathering", END)
 
-    # Matching → Presentation
+    # Security Analysis → Matching → Presentation → wait for the user's choice
+    workflow.add_edge("analyze_security", "matching")
     workflow.add_edge("matching", "presentation")
+    workflow.add_edge("presentation", END)
 
-    # Presentation → Selection (wait for user input)
-    workflow.add_edge("presentation", "selection")
-
-    # Selection → Conditional (need selection or handoff)
+    # Selection → handoff, or wait for a clearer choice
     workflow.add_conditional_edges(
         "selection",
-        should_continue_selecting,
+        expert_selected,
         {
-            "need_selection": "selection",
-            "handoff": "handoff"
+            "handoff": "handoff",
+            "wait_for_user": END
         }
     )
 
-    # Handoff → End
+    # Handoff and follow-up conversation → wait for the user
     workflow.add_edge("handoff", END)
+    workflow.add_edge("conversation", END)
 
     return workflow
 
@@ -179,7 +180,7 @@ class ChatWorkflow:
     def chat(self, session_id: str, user_message: str) -> dict:
         """
         Process a user message and return a response.
-        Runs ONE step of the workflow per call.
+        Runs the workflow graph for one conversation turn.
 
         Args:
             session_id: Unique session identifier
@@ -191,61 +192,24 @@ class ChatWorkflow:
 
         # Get or create session state
         if session_id in self.sessions:
-            state = self.sessions[session_id]
+            state = dict(self.sessions[session_id])
             state["user_message"] = user_message
-            # Add user message to history
-            state["messages"] = state.get("messages", []) + [
-                {"role": "user", "content": user_message}
-            ]
         else:
             state = self.get_initial_state(session_id, user_message)
 
-        # Determine which node to run based on phase
-        current_phase = state.get("current_phase", "greeting")
-        print(f"[WORKFLOW] Session {session_id[:8]}... Phase: {current_phase}")
+        # Add user message to history (nodes only append the assistant's reply)
+        state["messages"] = state.get("messages", []) + [
+            {"role": "user", "content": user_message}
+        ]
 
-        # Run ONE step based on current phase
-        if current_phase == "greeting":
-            # First message - greet and start gathering
-            result = greeting_node(state)
+        print(f"[WORKFLOW] Session {session_id[:8]}... Phase: {state.get('current_phase')}")
 
-        elif current_phase == "gathering":
-            # Continue gathering info
-            result = gathering_node(state)
-            result = extraction_node(result)
+        # Run the graph until the assistant needs the user's next reply
+        result = self.app.invoke(state)
 
-            # Check if we have enough context
-            # Need: sufficient context AND at least 2 gathering exchanges
-            # OR: at least 5 gathering exchanges (fallback to prevent endless loop)
-            attempts = result.get("extraction_attempts", 0)
-            has_context = result.get("has_sufficient_context", False)
-
-            if (has_context and attempts >= 2) or attempts >= 5:
-                # Move to security analysis and expert matching
-                print(f"[WORKFLOW] Moving to expert matching (attempts: {attempts}, has_context: {has_context})")
-                result = security_analysis_node(result)
-                result = matching_node(result)
-                result = presentation_node(result)
-            else:
-                print(f"[WORKFLOW] Continuing gathering (attempts: {attempts}, has_context: {has_context})")
-
-        elif current_phase in ["presenting", "selecting"]:
-            # User is selecting an expert
-            result = selection_node(state)
-            if result.get("selected_expert_id") is not None:
-                result = handoff_node(result)
-
-        elif current_phase in ["complete", "conversation"]:
-            # Free-form conversation after expert handoff
-            # Don't go back to expert matching - just chat
-            result = conversation_node(state)
-
-        else:
-            # Default: try gathering
-            result = gathering_node(state)
-
-        # Store updated state
+        # Store updated state (in memory for the live session, in PostgreSQL as a record)
         self.sessions[session_id] = result
+        save_conversation(result)
         print(f"[WORKFLOW] New phase: {result.get('current_phase')}")
 
         # Return response
@@ -258,7 +222,10 @@ class ChatWorkflow:
             "response": result.get("response", "I'm not sure how to respond. Can you tell me more?"),
             "phase": current_result_phase,
             "is_complete": result.get("is_complete", False),
-            "experts": result.get("matched_experts") if include_experts else None
+            "experts": [
+                {**match, "expert": public_expert(match.get("expert", {}))}
+                for match in result.get("matched_experts", [])
+            ] if include_experts else None
         }
 
     def reset_session(self, session_id: str):

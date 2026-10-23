@@ -6,7 +6,7 @@ Handle user's expert selection
 import re
 from app.agents.states import AgentState
 from app.agents.prompts.system import SYSTEM_PROMPT
-from app.llm import get_gemini
+from app.llm import get_llm
 
 SELECTION_CONVERSATION_PROMPT = """
 The user has been shown a list of cybersecurity experts and we're waiting for them to choose one.
@@ -68,7 +68,7 @@ def selection_node(state: AgentState) -> AgentState:
 
     # If still no match, use LLM to respond conversationally
     if not selected_expert:
-        gemini = get_gemini()
+        llm = get_llm()
         messages = state.get("messages", [])
 
         # Format experts for the prompt
@@ -79,16 +79,15 @@ def selection_node(state: AgentState) -> AgentState:
             experts_summary=experts_summary
         )
 
-        response = gemini.chat(
+        response = llm.chat(
             message=user_message,
             system_prompt=SYSTEM_PROMPT + "\n\n" + prompt,
-            history=messages
+            history=messages[:-1] if messages else []  # Exclude current message
         )
 
-        # Append to existing messages
+        # Append the reply (the workflow already added the user's message)
         existing_messages = state.get("messages", [])
         new_messages = existing_messages + [
-            {"role": "user", "content": user_message},
             {"role": "assistant", "content": response}
         ]
 

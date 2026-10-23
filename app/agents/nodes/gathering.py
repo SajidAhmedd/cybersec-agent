@@ -6,7 +6,7 @@ Ask follow-up questions to understand the problem
 from app.agents.states import AgentState
 from app.agents.prompts.system import SYSTEM_PROMPT
 from app.agents.prompts.gathering import GATHERING_PROMPT
-from app.llm import get_gemini
+from app.llm import get_llm
 
 
 def gathering_node(state: AgentState) -> AgentState:
@@ -15,7 +15,7 @@ def gathering_node(state: AgentState) -> AgentState:
     Ask targeted questions based on what we know and don't know.
     """
 
-    gemini = get_gemini()
+    llm = get_llm()
 
     # What do we currently know?
     problem_context = state.get("problem_context") or {}
@@ -36,16 +36,15 @@ def gathering_node(state: AgentState) -> AgentState:
     messages = state.get("messages", [])
 
     # Generate response
-    response = gemini.chat(
+    response = llm.chat(
         message=state.get("user_message", ""),
         system_prompt=SYSTEM_PROMPT + "\n\n" + prompt,
         history=messages[:-1] if messages else []  # Exclude current message
     )
 
-    # Update state - APPEND to existing messages
+    # Append the reply (the workflow already added the user's message)
     existing_messages = state.get("messages", [])
     new_messages = existing_messages + [
-        {"role": "user", "content": state.get("user_message", "")},
         {"role": "assistant", "content": response}
     ]
 

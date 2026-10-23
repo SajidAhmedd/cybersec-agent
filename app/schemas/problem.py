@@ -1,7 +1,7 @@
 """
 Problem Context Schema
 Structured representation of user's cybersecurity problem
-Extracted from conversation by Gemini
+Extracted from conversation by Claude
 """
 
 from pydantic import BaseModel, Field
@@ -32,7 +32,7 @@ class EmotionalState(str, Enum):
 class ProblemContext(BaseModel):
     """
     Structured representation of the user's cybersecurity problem.
-    Extracted from conversation by the Conversational Agent (Gemini).
+    Extracted from conversation by the Conversational Agent (Claude).
     """
 
     # Core problem details

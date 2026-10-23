@@ -1,10 +1,14 @@
-from .gemini import GeminiClient, get_gemini
+from .claude import ClaudeClient
+from .groq_client import GroqClient
+from .provider import get_llm, reset_llm_client
 from .foundation_sec import FoundationSecClient, get_foundation_sec
 from .structured import StructuredOutputParser
 
 __all__ = [
-    "GeminiClient",
-    "get_gemini",
+    "ClaudeClient",
+    "GroqClient",
+    "get_llm",
+    "reset_llm_client",
     "FoundationSecClient",
     "get_foundation_sec",
     "StructuredOutputParser",

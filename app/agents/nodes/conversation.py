@@ -6,7 +6,7 @@ Handle free-form conversation after expert handoff is complete
 from app.agents.states import AgentState
 from app.agents.prompts.system import SYSTEM_PROMPT
 from app.agents.prompts.presentation import POST_HANDOFF_PROMPT
-from app.llm import get_gemini
+from app.llm import get_llm
 
 
 def conversation_node(state: AgentState) -> AgentState:
@@ -15,21 +15,20 @@ def conversation_node(state: AgentState) -> AgentState:
     Be helpful and conversational without re-triggering expert matching.
     """
 
-    gemini = get_gemini()
+    llm = get_llm()
 
     user_message = state.get("user_message", "")
     messages = state.get("messages", [])
 
     # Generate conversational response
-    response = gemini.chat(
+    response = llm.chat(
         message=user_message,
         system_prompt=SYSTEM_PROMPT + "\n\n" + POST_HANDOFF_PROMPT,
-        history=messages
+        history=messages[:-1] if messages else []  # Exclude current message
     )
 
-    # Append to existing messages
+    # Append the reply (the workflow already added the user's message)
     new_messages = messages + [
-        {"role": "user", "content": user_message},
         {"role": "assistant", "content": response}
     ]
 
