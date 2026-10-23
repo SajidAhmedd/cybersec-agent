@@ -29,7 +29,7 @@ class Message(BaseModel):
     # Metadata
     agent: Optional[str] = Field(
         default=None,
-        description="Which agent generated this message (gemini, foundation_sec)"
+        description="Which agent generated this message (claude, foundation_sec)"
     )
 
 
@@ -61,7 +61,7 @@ class ConversationState(BaseModel):
     # Messages
     messages: list[Message] = Field(default_factory=list)
 
-    # Extracted context (from Gemini)
+    # Extracted context (from Claude)
     problem_context: Optional[ProblemContext] = None
 
     # Security analysis (from Foundation-Sec)

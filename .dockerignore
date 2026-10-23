@@ -1,0 +1,9 @@
+venv/
+.env
+.env.*
+!.env.example
+.git/
+**/__pycache__/
+frontend-next/
+frontend/
+*.log

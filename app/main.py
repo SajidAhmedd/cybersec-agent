@@ -11,7 +11,7 @@ from app.config import settings
 from app.api import chat_router, experts_router, health_router
 from app.db.postgres import init_db
 from app.graph.connection import close_neo4j
-from app.llm.gemini import get_gemini, reset_gemini_client
+from app.llm.provider import get_llm, reset_llm_client
 
 
 @asynccontextmanager
@@ -23,12 +23,12 @@ async def lifespan(app: FastAPI):
     # Startup
     print(f"Starting {settings.app_name}...")
     print(f"[STARTUP] USE_MOCK_LLM: {settings.use_mock_llm}")
-    print(f"[STARTUP] GOOGLE_API_KEY present: {bool(settings.google_api_key)}")
+    print(f"[STARTUP] LLM_PROVIDER: {settings.llm_provider}")
 
-    # Reset and initialize Gemini client
-    reset_gemini_client()
-    gemini = get_gemini()
-    print(f"[STARTUP] Gemini client initialized - mock_mode: {gemini.mock_mode}")
+    # Reset and initialize the LLM client
+    reset_llm_client()
+    llm = get_llm()
+    print(f"[STARTUP] LLM client initialized - mock_mode: {llm.mock_mode}")
 
     # Initialize database tables
     try:
@@ -75,7 +75,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately in production
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

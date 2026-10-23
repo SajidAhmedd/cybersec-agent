@@ -30,7 +30,7 @@ User
 └────────────┬────────────────────────────┬───────────────┘
              ↓                            ↓
 ┌────────────────────────┐   ┌────────────────────────────┐
-│   GEMINI (Conversation)│   │ FOUNDATION-SEC (Analysis)  │
+│ GROQ / CLAUDE (Convo) │   │ FOUNDATION-SEC (Analysis)  │
 │   • Talk to user       │   │ • Threat classification    │
 │   • Ask questions      │   │ • Skill mapping            │
 │   • Present experts    │   │ • Severity assessment      │
@@ -54,7 +54,7 @@ User
 |-----------|------------|
 | Backend | Python, FastAPI |
 | Agent Orchestration | LangGraph |
-| Conversation AI | Google Gemini |
+| Conversation AI | Groq (default) or Anthropic Claude |
 | Security AI | Foundation-Sec-8B |
 | Graph Database | Neo4j |
 | Relational Database | PostgreSQL |
@@ -68,7 +68,7 @@ User
 
 - Python 3.11+
 - Docker & Docker Compose
-- Google Cloud API Key (for Gemini)
+- Groq API key (free) or Anthropic API key (for Claude)
 
 ### 1. Clone and Setup
 
@@ -91,7 +91,8 @@ pip install -r requirements.txt
 copy .env.example .env
 
 # Edit .env and add your API keys:
-# - GOOGLE_API_KEY (required)
+# - GROQ_API_KEY (required with LLM_PROVIDER=groq, the default)
+# - ANTHROPIC_API_KEY (required with LLM_PROVIDER=claude)
 # - Twilio credentials (optional, for WhatsApp)
 # - SendGrid credentials (optional, for Email)
 ```
@@ -134,6 +135,10 @@ streamlit run frontend/streamlit_app.py
 
 # Opens at http://localhost:8501
 ```
+
+## Deployment
+
+See [DEPLOY.md](DEPLOY.md) for a free-tier deployment (Vercel + Render + Neon + Neo4j AuraDB + Groq).
 
 ## API Endpoints
 
@@ -179,7 +184,9 @@ CyberSecAgent/
 │   │   ├── nodes/           # Workflow nodes
 │   │   └── prompts/         # AI prompts
 │   ├── llm/                  # LLM clients
-│   │   ├── gemini.py        # Gemini client
+│   │   ├── provider.py      # Picks the LLM client
+│   │   ├── groq_client.py   # Groq client
+│   │   ├── claude.py        # Claude client
 │   │   └── foundation_sec.py # Security AI client
 │   ├── graph/                # Neo4j integration
 │   │   ├── connection.py
@@ -210,7 +217,9 @@ CyberSecAgent/
 
 | Variable | Description |
 |----------|-------------|
-| `GOOGLE_API_KEY` | Google Cloud API key for Gemini |
+| `LLM_PROVIDER` | `groq` (default) or `claude` |
+| `GROQ_API_KEY` | Groq API key (when `LLM_PROVIDER=groq`) |
+| `ANTHROPIC_API_KEY` | Anthropic API key (when `LLM_PROVIDER=claude`) |
 
 ### Optional Environment Variables
 
@@ -232,7 +241,7 @@ pytest tests/
 ### Code Structure
 
 - **Agents**: LangGraph-based conversation workflow
-- **LLM**: Gemini for conversation, Foundation-Sec for security analysis
+- **LLM**: Groq or Claude for conversation, Foundation-Sec for security analysis
 - **Graph**: Neo4j for relationship-based expert matching
 - **Services**: Business logic for handoff and notifications
 

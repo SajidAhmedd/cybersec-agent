@@ -58,3 +58,6 @@ out/
 # Database files
 *.sqlite3
 *.db
+
+# TypeScript incremental build cache
+*.tsbuildinfo

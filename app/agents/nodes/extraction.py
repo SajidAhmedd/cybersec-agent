@@ -6,16 +6,16 @@ Extract structured problem context from conversation
 from app.agents.states import AgentState
 from app.agents.prompts.gathering import EXTRACTION_PROMPT
 from app.schemas.problem import ProblemContext
-from app.llm import get_gemini
+from app.llm import get_llm
 
 
 def extraction_node(state: AgentState) -> AgentState:
     """
     Extract structured problem context from the conversation.
-    Uses Gemini to parse conversation into ProblemContext schema.
+    Uses the LLM to parse conversation into ProblemContext schema.
     """
 
-    gemini = get_gemini()
+    llm = get_llm()
 
     # Check if the user's last message was a question (not providing info)
     user_message = state.get("user_message", "").strip().lower()
@@ -30,7 +30,7 @@ def extraction_node(state: AgentState) -> AgentState:
 
     # Extract structured context
     try:
-        problem_context = gemini.generate_structured(
+        problem_context = llm.generate_structured(
             prompt=prompt,
             response_model=ProblemContext
         )
