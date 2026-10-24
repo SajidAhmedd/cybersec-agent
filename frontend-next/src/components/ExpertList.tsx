@@ -35,11 +35,10 @@ export function ExpertList({ experts, onSelect, isLoading }: ExpertListProps) {
 
         {/* Expert Cards Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {experts.map((recommendation, index) => (
+          {experts.map((recommendation) => (
             <ExpertCard
               key={recommendation.expert.id}
               recommendation={recommendation}
-              index={index}
               onSelect={onSelect}
               isLoading={isLoading}
             />
