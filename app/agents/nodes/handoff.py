@@ -86,6 +86,15 @@ def handoff_node(state: AgentState) -> AgentState:
 
 def _build_contact_options(expert: dict) -> str:
     """Build contact options string for the expert"""
+    # Seeded sample experts use reserved example.com addresses and made-up numbers
+    email = expert.get("email") or ""
+    if not email or email.endswith("@example.com"):
+        return (
+            f"None. {expert.get('name')} is a sample profile in this demo with no real contact "
+            "details. Say so plainly instead of offering WhatsApp, email or a call, and suggest "
+            "choosing one of the external freelancers to reach a real person."
+        )
+
     options = []
 
     if expert.get("whatsapp"):
