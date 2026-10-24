@@ -61,6 +61,11 @@ ALTER TABLE experts ADD COLUMN IF NOT EXISTS is_external BOOLEAN DEFAULT FALSE;
 ALTER TABLE experts ADD COLUMN IF NOT EXISTS profile_platform VARCHAR(50);
 ALTER TABLE experts ADD COLUMN IF NOT EXISTS profile_url VARCHAR(500);
 
+-- Featured experts are always listed first; public_contact experts agreed to show
+-- their email/WhatsApp on the site
+ALTER TABLE experts ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT FALSE;
+ALTER TABLE experts ADD COLUMN IF NOT EXISTS public_contact BOOLEAN DEFAULT FALSE;
+
 -- Expert-Skills junction table
 CREATE TABLE IF NOT EXISTS expert_skills (
     expert_id INTEGER REFERENCES experts(id) ON DELETE CASCADE,

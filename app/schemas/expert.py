@@ -109,5 +109,7 @@ PRIVATE_EXPERT_FIELDS = ("email", "phone", "whatsapp")
 
 
 def public_expert(expert: dict) -> dict:
-    """Return an expert profile without private contact details"""
+    """Return an expert profile without private contact details, unless the expert made them public"""
+    if expert.get("public_contact"):
+        return dict(expert)
     return {k: v for k, v in expert.items() if k not in PRIVATE_EXPERT_FIELDS}

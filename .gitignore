@@ -61,3 +61,6 @@ out/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Featured experts' contact details stay out of the public repo
+scripts/featured_experts.json

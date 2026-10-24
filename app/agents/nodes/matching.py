@@ -28,10 +28,11 @@ def matching_node(state: AgentState) -> AgentState:
     # Search for experts
     try:
         graph_search = ExpertGraphSearch()
+        # Search wider than we show, so the pinned slots can be filled from real matches
         matches = graph_search.search(
             security_analysis=security_analysis,
             problem_context=problem_context,
-            limit=5
+            limit=10
         )
 
         # Enrich with PostgreSQL data
@@ -47,6 +48,11 @@ def matching_node(state: AgentState) -> AgentState:
                     "expert": expert_data,
                     "match": match.model_dump()
                 })
+
+        featured, external = _get_pinned_candidates()
+        matched_experts = order_matches(
+            matched_experts, featured, external, security_analysis.required_skills, limit=5
+        )
 
     except Exception as e:
         print(f"Matching failed: {e}")
@@ -76,6 +82,64 @@ def _get_expert_profiles(expert_ids: list[int]) -> dict:
         print(f"Failed to fetch profiles: {e}")
 
     return profiles
+
+
+def order_matches(
+    matched: list[dict],
+    featured: list[dict],
+    external: list[dict],
+    required_skills: list[str],
+    limit: int = 5
+) -> list[dict]:
+    """
+    Order the experts shown to the user: featured experts first, then the
+    best-matching external freelancer (so a real profile is always offered),
+    then the remaining matches by score.
+
+    featured / external are expert profiles used when the graph search did not
+    return them for this problem.
+    """
+    by_id = {m["expert"]["id"]: m for m in matched}
+
+    def as_match(expert: dict) -> dict:
+        if expert["id"] in by_id:
+            return by_id[expert["id"]]
+        skills = [s for s in required_skills if s in expert.get("skills", [])]
+        return {
+            "expert": expert,
+            "match": {
+                "expert_id": expert["id"],
+                "match_score": 0.9 if expert.get("is_featured") else 0.6,
+                "matched_skills": skills,
+                "matched_certifications": [],
+                "match_reasons": [f"Has skills: {', '.join(skills[:3])}"] if skills else ["General security support"],
+            },
+        }
+
+    ordered = [as_match(e) for e in featured]
+
+    external_match = next((m for m in matched if m["expert"].get("is_external")), None)
+    if external_match is None and external:
+        external_match = as_match(external[0])
+    if external_match is not None:
+        ordered.append(external_match)
+
+    shown = {m["expert"]["id"] for m in ordered}
+    ordered += [m for m in matched if m["expert"]["id"] not in shown]
+    return ordered[:max(limit, len(featured) + 1)]
+
+
+def _get_pinned_candidates() -> tuple[list[dict], list[dict]]:
+    """Fetch active featured experts and active external freelancers from PostgreSQL"""
+    try:
+        with get_db_context() as db:
+            active = db.query(Expert).filter(Expert.is_active == True)  # noqa: E712
+            featured = [e.to_dict() for e in active.filter(Expert.is_featured == True).order_by(Expert.id)]  # noqa: E712
+            external = [e.to_dict() for e in active.filter(Expert.is_external == True).order_by(Expert.id)]  # noqa: E712
+        return featured, external
+    except Exception as e:
+        print(f"Failed to fetch pinned experts: {e}")
+        return [], []
 
 
 def _get_mock_experts() -> list[dict]:
