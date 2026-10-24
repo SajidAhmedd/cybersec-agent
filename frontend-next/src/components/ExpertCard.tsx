@@ -5,30 +5,35 @@ import { Star, Clock, DollarSign, MapPin, CheckCircle2, ExternalLink } from 'luc
 
 interface ExpertCardProps {
   recommendation: ExpertRecommendation;
-  index: number;
   onSelect: (expertId: number, expertName: string) => void;
   isLoading: boolean;
 }
 
 export function ExpertCard({
   recommendation,
-  index,
   onSelect,
   isLoading,
 }: ExpertCardProps) {
   const { expert, match } = recommendation;
   const matchPercent = Math.round(match.match_score * 100);
+  // Featured and freelancer cards are pinned to the top, so label cards by kind
+  // rather than by rank (a lower card can have a higher match score)
+  const kindLabel = expert.is_featured
+    ? 'Featured expert'
+    : expert.is_external
+      ? `${expert.profile_platform || 'External'} freelancer`
+      : 'Network expert';
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
       {/* Match Score Banner */}
       <div className="bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 flex items-center justify-between">
         <span className="text-white text-sm font-medium">
-          #{index + 1} Match
+          {kindLabel}
         </span>
         <div className="flex items-center gap-1">
           <CheckCircle2 size={16} className="text-white" />
-          <span className="text-white font-bold">{matchPercent}%</span>
+          <span className="text-white font-bold">{matchPercent}% match</span>
         </div>
       </div>
 

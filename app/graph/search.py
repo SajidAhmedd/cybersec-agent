@@ -52,17 +52,23 @@ class ExpertGraphSearch:
         try:
             cypher, params = query_builder.build_query()
             results = self.neo4j.run_query(cypher, params)
+            # The full query sums raw points; scale to the best score possible for this problem
+            best_score = self.best_possible_score(
+                len(security_analysis.required_skills or []),
+                has_location=bool(problem_context and problem_context.location)
+            )
         except Exception as e:
             print(f"Full query failed, trying simple: {e}")
             cypher, params = query_builder.build_simple_query()
             results = self.neo4j.run_query(cypher, params)
+            best_score = 1.0  # already a 0-1 skill coverage ratio
 
         # Convert to ExpertMatch objects
         matches = []
         for record in results:
             match = ExpertMatch(
                 expert_id=record["expert_id"],
-                match_score=min(record.get("match_score", 0.5), 1.0),
+                match_score=round(min(record.get("match_score", 0.5) / best_score, 1.0), 2),
                 matched_skills=record.get("matched_skills", []),
                 matched_certifications=record.get("matched_certifications", []),
                 match_reasons=self._generate_match_reasons(record)
@@ -70,6 +76,16 @@ class ExpertGraphSearch:
             matches.append(match)
 
         return matches
+
+    @staticmethod
+    def best_possible_score(required_skill_count: int, has_location: bool = False) -> float:
+        """
+        Highest total the full query can give: per matched skill a weight of up to
+        1.0 plus 10+ years of experience (0.5), then the platform (0.15), service
+        (0.1), urgency (0.15) and 5-star rating (0.25) bonuses, and location (0.1)
+        when the user gave one.
+        """
+        return max(required_skill_count, 1) * 1.5 + 0.65 + (0.1 if has_location else 0)
 
     def _generate_match_reasons(self, record: dict) -> list[str]:
         """Generate human-readable match reasons"""
