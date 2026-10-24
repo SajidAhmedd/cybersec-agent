@@ -36,7 +36,20 @@ export function ExpertCard({
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{expert.name}</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {expert.is_external && expert.profile_url ? (
+                <a
+                  href={expert.profile_url}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="hover:text-primary-600 hover:underline"
+                >
+                  {expert.name}
+                </a>
+              ) : (
+                expert.name
+              )}
+            </h3>
             <p className="text-sm text-gray-600">{expert.title}</p>
           </div>
 
