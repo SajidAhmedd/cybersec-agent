@@ -43,3 +43,10 @@ def test_public_contact_kept_only_when_expert_opted_in():
     assert public_expert(FEATURED)["whatsapp"] == "+447700900000"
     hidden = public_expert(_expert(1, email="a@example.com", whatsapp="+1", phone="+1"))
     assert not {"email", "whatsapp", "phone"} & hidden.keys()
+
+
+def test_best_possible_score_scales_with_skills():
+    from app.graph.search import ExpertGraphSearch
+    assert ExpertGraphSearch.best_possible_score(2) == 3.65
+    assert ExpertGraphSearch.best_possible_score(0) == 2.15
+    assert ExpertGraphSearch.best_possible_score(2, has_location=True) == 3.75

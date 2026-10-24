@@ -113,12 +113,10 @@ Expert {i} (EXTERNAL - independent freelancer on {expert.get('profile_platform')
         if expert.get("is_featured"):
             # No ratings, rates or experience on record; only state what we know
             lines.append(f"""
-Expert {i} (FEATURED - present first; reachable directly by WhatsApp or email):
+Expert {i} (FEATURED - present first; reachable directly by WhatsApp or email. Describe them only with the title and "About" text below - do not add skills, experience, certifications or response times):
 - Name: {expert.get('name', 'Unknown')}
 - Title: {expert.get('title', 'Security Expert')}
 - About: {expert.get('bio') or 'Cybersecurity specialist'}
-- Response time: {expert.get('response_time') or 'Varies'}
-- Why they match: {', '.join(match.get('match_reasons', []))}
 """)
             continue
 
