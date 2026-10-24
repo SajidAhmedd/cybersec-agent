@@ -99,15 +99,13 @@ def _build_contact_options(expert: dict) -> str:
 
     if expert.get("whatsapp"):
         options.append(f"- WhatsApp: Click to chat with {expert.get('name')}")
-    else:
-        options.append("- WhatsApp: Available upon confirmation")
 
-    if expert.get("email"):
-        options.append(f"- Email: Send a message to {expert.get('name')}")
-    else:
-        options.append("- Email: Available upon confirmation")
+    options.append(f"- Email: Send a message to {expert.get('name')}")
 
-    options.append("- Schedule a call: Book a convenient time slot")
+    if expert.get("linkedin"):
+        options.append("- LinkedIn: View their profile")
+
+    options.append("These open from the contact buttons shown on screen.")
 
     return "\n".join(options)
 

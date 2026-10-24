@@ -4,7 +4,9 @@ Seed PostgreSQL and Neo4j with the schema and demo experts.
 Uses the same settings as the app (.env or environment variables), so it can
 seed hosted databases (e.g. Neon + Neo4j AuraDB) as well as local Docker ones.
 Also syncs scripts/external_experts.json (public freelancer profiles, linked
-only - see external_experts.example.json for the format).
+only - see external_experts.example.json for the format) and
+scripts/featured_experts.json (experts always listed first, with public contact
+details - kept out of git; see featured_experts.example.json).
 Everything is idempotent, so running this again is safe.
 
 Usage (from the project root):
@@ -161,7 +163,84 @@ def seed_external_experts():
     print(f"External experts synced: {len(synced)} active")
 
 
+def seed_featured_experts():
+    """
+    Sync scripts/featured_experts.json into both databases. Featured experts are
+    listed first for every problem and their email/WhatsApp are shown on the site,
+    so they cover every skill, platform and service in the graph.
+    Featured experts no longer in the file lose the flag.
+    """
+    from app.db.postgres import get_db_context
+    from app.db.models import Expert, Skill
+
+    path = SCRIPTS / "featured_experts.json"
+    entries = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+    neo4j = get_neo4j()
+
+    synced = []
+    with get_db_context() as db:
+        for entry in entries:
+            if not entry.get("name") or not entry.get("email"):
+                print(f"Skipping featured expert without a name or email: {entry}")
+                continue
+
+            expert = db.query(Expert).filter_by(email=entry["email"]).first()
+            if expert is None:
+                expert = Expert(email=entry["email"])
+                db.add(expert)
+
+            expert.name = entry["name"]
+            expert.title = entry.get("title") or "Cybersecurity Specialist"
+            expert.bio = entry.get("bio")
+            expert.whatsapp = entry.get("whatsapp")
+            expert.phone = entry.get("whatsapp")
+            expert.linkedin = entry.get("linkedin")
+            expert.website = entry.get("website")
+            expert.location = entry.get("location")
+            expert.response_time = entry.get("response_time")
+            expert.years_experience = entry.get("years_experience") or 0
+            expert.is_featured = True
+            expert.public_contact = True
+            expert.is_external = False
+            expert.is_verified = True
+            expert.is_active = True
+            expert.availability = True
+            expert.skills = db.query(Skill).all()
+            db.flush()  # assigns expert.id
+            synced.append((expert.id, entry))
+
+        db.query(Expert).filter(
+            Expert.is_featured == True,  # noqa: E712
+            ~Expert.id.in_([expert_id for expert_id, _ in synced])
+        ).update({"is_featured": False, "public_contact": False}, synchronize_session=False)
+
+    for expert_id, entry in synced:
+        neo4j.run_write_query(
+            """
+            MERGE (e:Expert {id: $id})
+            SET e.name = $name, e.title = $title, e.location = $location,
+                e.availability = true, e.is_active = true, e.handles_urgent = true,
+                e.is_external = false, e.is_featured = true
+            WITH e
+            MATCH (s:Skill) MERGE (e)-[r:HAS_SKILL]->(s) SET r.weight = 0.9, r.years = 3
+            """,
+            {"id": expert_id, "name": entry["name"], "title": entry.get("title"), "location": entry.get("location")}
+        )
+        neo4j.run_write_query(
+            """
+            MATCH (e:Expert {id: $id})
+            MATCH (p:Platform) MERGE (e)-[:WORKS_ON]->(p)
+            WITH DISTINCT e
+            MATCH (s:Service) MERGE (e)-[:OFFERS]->(s)
+            """,
+            {"id": expert_id}
+        )
+
+    print(f"Featured experts synced: {len(synced)}")
+
+
 if __name__ == "__main__":
     seed_postgres()
     seed_neo4j()
     seed_external_experts()
+    seed_featured_experts()

@@ -76,6 +76,11 @@ class Expert(Base):
     profile_platform = Column(String(50), nullable=True)
     profile_url = Column(String(500), nullable=True)
 
+    # Featured experts are always listed first; public_contact experts agreed to
+    # show their email/WhatsApp on the site
+    is_featured = Column(Boolean, default=False)
+    public_contact = Column(Boolean, default=False)
+
     # Profile
     profile_image = Column(String(500), nullable=True)
     is_verified = Column(Boolean, default=False)
@@ -119,6 +124,8 @@ class Expert(Base):
             "is_external": bool(self.is_external),
             "profile_platform": self.profile_platform,
             "profile_url": self.profile_url,
+            "is_featured": bool(self.is_featured),
+            "public_contact": bool(self.public_contact),
         }
 
 
