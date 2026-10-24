@@ -1,0 +1,13 @@
+[
+  {
+    "name": "Jane Doe",
+    "title": "Cybersecurity Specialist",
+    "bio": "One or two sentences shown on the expert card.",
+    "email": "jane@example.org",
+    "whatsapp": "+447700900000",
+    "linkedin": "https://www.linkedin.com/in/jane-doe",
+    "website": "https://example.org",
+    "location": "London, UK",
+    "response_time": "1 hour"
+  }
+]

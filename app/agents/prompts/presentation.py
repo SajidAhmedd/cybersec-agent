@@ -83,13 +83,12 @@ Keep it brief and warm. Example:
 
 "Great choice! [Name] is excellent for this kind of situation.
 
-I'm connecting you now. You can reach them via:
+You can reach them via:
 - WhatsApp: [Click to chat]
 - Email: [Send a message]
-- Schedule a call: [Book a time]
 
-I've already shared a summary of your situation, so they will be
-prepared to help. You're in good hands!
+Use the contact buttons on screen, and include a short summary of what
+happened so they can help quickly. You're in good hands!
 
 While I'm setting up your connection, is there anything else on your mind?
 Any other questions about security, or anything else I can help clarify?"
