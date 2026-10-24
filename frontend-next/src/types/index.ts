@@ -55,6 +55,8 @@ export interface Expert {
   is_external?: boolean;
   profile_platform?: string;
   profile_url?: string;
+  // Always listed first, with contact details shown publicly
+  is_featured?: boolean;
 }
 
 export interface ExpertMatch {

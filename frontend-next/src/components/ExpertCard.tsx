@@ -53,8 +53,14 @@ export function ExpertCard({
             <p className="text-sm text-gray-600">{expert.title}</p>
           </div>
 
+          {expert.is_featured && (
+            <span className="px-2 py-1 bg-cyan-50 text-cyan-700 text-xs font-medium rounded-lg border border-cyan-200">
+              Featured
+            </span>
+          )}
+
           {/* Rating (network experts only - external profiles have no rating here) */}
-          {!expert.is_external && (
+          {!expert.is_external && expert.total_reviews > 0 && (
             <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
               <Star size={16} className="text-yellow-500 fill-yellow-500" />
               <span className="text-sm font-medium text-yellow-700">
